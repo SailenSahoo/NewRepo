@@ -1,0 +1,143 @@
+.dashboard-container {
+    padding: 20px;
+    display: grid;
+    grid-template-rows: auto auto 1fr;
+    gap: 20px;
+  }
+
+  .chart-heading {
+    text-align: center;
+    margin-bottom: 10px;
+    font-weight: bold;
+    font-size: 1.2em;
+    color: #333; /* Or your preferred color */
+  }
+  
+  .filters-box-dark {
+    background-color: #1d0920be; /* Dark background for filters */
+    padding: 10px;
+    border-radius: 5px;
+  }
+  
+  .filters-box,
+  .charts-box,
+  .table-box {
+    border: 1px solid #ccc;
+    padding: 20px;
+  }
+
+  .app-id-bar-chart-container {
+    /* border: 1px solid #ccc;
+    padding: 20px;
+    margin-bottom: 20px; */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 800px; /* Adjust as needed */
+    margin: 20px auto; /* Center the chart */
+    padding: 20px;
+    background-color: white; /* Optional: Makes the chart stand out */
+    border-radius: 8px;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+  }
+  
+  .filters-grid {
+    display: grid;
+    grid-template-columns: repeat(5, auto); /* 5 columns for filters and button */
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .filter-select,
+  .apply-filters-button-blue {
+    padding: 8px 15px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  
+  .filter-select {
+    background-color: #f0f0f0;
+  }
+  
+  .apply-filters-button-blue {
+    background-color: #007bff; /* Blue button */
+    color: white;
+  }
+  
+  .charts-box {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .chart-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+  }
+  
+  .chart-heading {
+    text-align: center;
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 10px;
+  }  
+  
+  .chart-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+  
+  .bar-chart,
+  .doughnut-chart {
+    height: 300px;
+  }
+  
+  .table-box {
+    overflow-x: auto;
+  }
+  
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  
+  .table-cell,
+  .table-header-blue th {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: center;
+  }
+  
+  .table-header-blue {
+    background-color: #007bff; /* Blue header */
+    color: white;
+  }
+  
+  .pagination {
+    display: flex;
+    justify-content: space-between; /* Corner align pagination */
+    margin-top: 10px;
+    background-color: #007bff; /* Blue pagination background */
+    color: white;
+    padding: 10px;
+    border-radius: 5px;
+  }
+  
+  .pagination-button-blue {
+    padding: 8px 12px;
+    background-color: white;
+    color: #007bff;
+    border: none;
+    border-radius: 5px;
+    margin: 0 10px;
+    cursor: pointer;
+  }
+  
+  .pagination-text {
+    margin: 0 10px;
+  }
