@@ -1,0 +1,142 @@
+/* General layout */
+.app-container {
+    display: flex;
+    height: 100vh;
+  }
+  
+  /* Sidebar */
+  .sidebar {
+    width: 60px; /* Collapsed width */
+    background: #333;
+    color: white;
+    padding: 10px;
+    transition: width 0.3s ease-in-out;
+    overflow: hidden;
+    position: fixed; /* Keeps sidebar fixed while scrolling */
+    height: 100vh;
+    top: 0;
+    left: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  /* Expand on hover */
+  .sidebar.expanded {
+    width: 200px;
+  }
+  
+  /* Menu button */
+  .menu-button {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    background: #222;
+    color: white;
+    cursor: pointer;
+    margin-bottom: 10px;
+  }
+  
+  /* Sidebar inner container */
+  .sidebar-inner {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  /* Buttons */
+  .dashboard-button {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 10px;
+    background: #444;
+    border: none;
+    color: white;
+    cursor: pointer;
+    text-align: left;
+    margin-bottom: 5px;
+    transition: background 0.3s;
+  }
+  
+  .dashboard-button:hover {
+    background: #555;
+  }
+  
+  .dashboard-button.active {
+    background: #007bff;
+  }
+  
+  /* Icons */
+  .icon {
+    font-size: 20px;
+    margin-right: 10px;
+  }
+  
+  /* Button text (hidden when collapsed) */
+  .button-text {
+    display: none;
+  }
+  
+  .sidebar.expanded .button-text {
+    display: inline; /* Show text when expanded */
+  }
+  
+  /* Content area */
+  .content {
+    flex-grow: 1;
+    padding: 20px;
+    margin-left: 60px; /* Same as collapsed sidebar width */
+    transition: margin-left 0.3s;
+  }
+  
+  .sidebar.expanded ~ .content {
+    margin-left: 200px; /* Adjust margin when sidebar expands */
+  }
+  
+  /* Title */
+  .dashboard-title {
+    font-size: 24px;
+    margin-bottom: 20px;
+  }
+
+  .manager-table {
+    width: 80%;
+    margin: 20px auto;
+    border-collapse: collapse;
+  }
+  
+  .manager-table th, .manager-table td {
+    border: 1px solid #ddd;
+    padding: 10px;
+    text-align: left;
+  }
+  
+  .manager-table th {
+    background-color: #007bff;
+    color: white;
+  }
+  
+  .expand-btn {
+    margin-right: 8px;
+    padding: 2px 8px;
+    border: none;
+    background-color: #007bff;
+    color: white;
+    cursor: pointer;
+    border-radius: 4px;
+  }
+  
+  .expand-btn:hover {
+    background-color: #0056b3;
+  }
+  
+  .sub-row td {
+    padding-left: 20px;
+    background-color: #f9f9f9;
+  }
+  
+  .sub-sub-row td {
+    padding-left: 40px;
+    background-color: #eef2ff;
+  }
+  
+  
