@@ -3,12 +3,11 @@ import * as XLSX from "xlsx";
 import "./styles.css";
 
 const Table = () => {
-  const [data, setData] = useState([]);
+  const [data, setData] = useState({});
   const [expandedRows, setExpandedRows] = useState({});
 
   useEffect(() => {
-    // Load and parse the Excel file
-    fetch("/data/managers.xlsx") // Ensure this matches your file name
+    fetch("/data/managers.xlsx")
       .then((res) => res.arrayBuffer())
       .then((buffer) => {
         const workbook = XLSX.read(buffer, { type: "array" });
@@ -19,43 +18,59 @@ const Table = () => {
       .catch((error) => console.error("Error loading Excel:", error));
   }, []);
 
-  // Process data to group repositories, projects, and CSI IDs under each manager level
   const processData = (rows) => {
     const hierarchy = {};
-    
+
     rows.forEach(({ "L4 Manager": L4, "L5 Manager": L5, "L6 Manager": L6, repositories, projects, "CSI ID": csiId }) => {
-      if (!hierarchy[L4]) hierarchy[L4] = { repoCount: 0, projectCount: new Set(), csiCount: new Set(), children: {} };
+      if (!L4) return; // Skip rows without an L4 Manager
+
+      if (!hierarchy[L4]) {
+        hierarchy[L4] = { repoCount: 0, projectCount: new Set(), csiCount: new Set(), children: {} };
+      }
       hierarchy[L4].repoCount += 1;
-      hierarchy[L4].projectCount.add(projects);
-      hierarchy[L4].csiCount.add(csiId);
+      if (projects) hierarchy[L4].projectCount.add(projects);
+      if (csiId) hierarchy[L4].csiCount.add(csiId);
 
       if (L5) {
-        if (!hierarchy[L4].children[L5]) hierarchy[L4].children[L5] = { repoCount: 0, projectCount: new Set(), csiCount: new Set(), children: {} };
+        if (!hierarchy[L4].children[L5]) {
+          hierarchy[L4].children[L5] = { repoCount: 0, projectCount: new Set(), csiCount: new Set(), children: {} };
+        }
         hierarchy[L4].children[L5].repoCount += 1;
-        hierarchy[L4].children[L5].projectCount.add(projects);
-        hierarchy[L4].children[L5].csiCount.add(csiId);
+        if (projects) hierarchy[L4].children[L5].projectCount.add(projects);
+        if (csiId) hierarchy[L4].children[L5].csiCount.add(csiId);
 
         if (L6) {
-          if (!hierarchy[L4].children[L5].children[L6]) hierarchy[L4].children[L5].children[L6] = { repoCount: 0, projectCount: new Set(), csiCount: new Set() };
+          if (!hierarchy[L4].children[L5].children[L6]) {
+            hierarchy[L4].children[L5].children[L6] = { repoCount: 0, projectCount: new Set(), csiCount: new Set() };
+          }
           hierarchy[L4].children[L5].children[L6].repoCount += 1;
-          hierarchy[L4].children[L5].children[L6].projectCount.add(projects);
-          hierarchy[L4].children[L5].children[L6].csiCount.add(csiId);
+          if (projects) hierarchy[L4].children[L5].children[L6].projectCount.add(projects);
+          if (csiId) hierarchy[L4].children[L5].children[L6].csiCount.add(csiId);
         }
       }
     });
 
-    // Convert Sets to counts
     const convertCounts = (node) => {
-      node.projectCount = node.projectCount.size;
-      node.csiCount = node.csiCount.size;
-      Object.values(node.children).forEach(convertCounts);
+      if (!node) return;
+
+      if (node.projectCount instanceof Set) {
+        node.projectCount = node.projectCount.size;
+      }
+
+      if (node.csiCount instanceof Set) {
+        node.csiCount = node.csiCount.size;
+      }
+
+      if (node.children && typeof node.children === "object") {
+        Object.values(node.children).forEach(convertCounts);
+      }
     };
+
     Object.values(hierarchy).forEach(convertCounts);
 
     return hierarchy;
   };
 
-  // Toggle expansion of a row
   const toggleRow = (manager) => {
     setExpandedRows((prev) => ({ ...prev, [manager]: !prev[manager] }));
   };
@@ -72,8 +87,8 @@ const Table = () => {
       </thead>
       <tbody>
         {Object.entries(data).map(([L4, L4Data]) => (
-          <>
-            <tr key={L4}>
+          <React.Fragment key={L4}>
+            <tr>
               <td>
                 <button className="expand-btn" onClick={() => toggleRow(L4)}>
                   {expandedRows[L4] ? "−" : "+"}
@@ -86,8 +101,8 @@ const Table = () => {
             </tr>
             {expandedRows[L4] &&
               Object.entries(L4Data.children).map(([L5, L5Data]) => (
-                <>
-                  <tr key={L5} className="sub-row">
+                <React.Fragment key={L5}>
+                  <tr className="sub-row">
                     <td>
                       <button className="expand-btn" onClick={() => toggleRow(L5)}>
                         {expandedRows[L5] ? "−" : "+"}
@@ -107,9 +122,9 @@ const Table = () => {
                         <td>{L6Data.csiCount}</td>
                       </tr>
                     ))}
-                </>
+                </React.Fragment>
               ))}
-          </>
+          </React.Fragment>
         ))}
       </tbody>
     </table>
