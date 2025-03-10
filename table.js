@@ -5,9 +5,7 @@ import "./styles.css";
 const Table = () => {
   const [data, setData] = useState([]);
   const [expandedRows, setExpandedRows] = useState({});
-  const [l4Filter, setL4Filter] = useState("");
-  const [l5Filter, setL5Filter] = useState("");
-  const [l6Filter, setL6Filter] = useState("");
+  const [filters, setFilters] = useState({ L4: "", L5: "", L6: "" });
   const [filteredData, setFilteredData] = useState([]);
 
   useEffect(() => {
@@ -17,9 +15,7 @@ const Table = () => {
         const workbook = XLSX.read(buffer, { type: "array" });
         const sheetName = workbook.SheetNames[0];
         const sheet = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
-        const processedData = processData(sheet);
-        setData(processedData);
-        setFilteredData(processedData);
+        setData(processData(sheet));
       })
       .catch((error) => console.error("Error loading Excel:", error));
   }, []);
@@ -60,38 +56,27 @@ const Table = () => {
     return hierarchy;
   };
 
-  const applyFilter = () => {
-    const filtered = Object.entries(data).reduce((acc, [L4, L4Data]) => {
-      if (L4.toLowerCase().includes(l4Filter.toLowerCase())) {
-        const filteredChildren = Object.entries(L4Data.children).reduce((childAcc, [L5, L5Data]) => {
-          if (L5.toLowerCase().includes(l5Filter.toLowerCase())) {
-            const filteredGrandChildren = Object.entries(L5Data.children).reduce((grandChildAcc, [L6, L6Data]) => {
-              if (L6.toLowerCase().includes(l6Filter.toLowerCase())) {
-                grandChildAcc[L6] = L6Data;
-              }
-              return grandChildAcc;
-            }, {});
-            childAcc[L5] = { ...L5Data, children: filteredGrandChildren };
-          }
-          return childAcc;
-        }, {});
-        acc[L4] = { ...L4Data, children: filteredChildren };
-      }
-      return acc;
-    }, {});
-    setFilteredData(filtered);
+  const handleFilterChange = (level, value) => {
+    setFilters((prev) => ({ ...prev, [level]: value }));
   };
 
-  const toggleRow = (manager) => {
-    setExpandedRows((prev) => ({ ...prev, [manager]: !prev[manager] }));
+  const applyFilter = () => {
+    const filtered = Object.entries(data).filter(([L4, L4Data]) =>
+      L4.toLowerCase().includes(filters.L4.toLowerCase()) &&
+      Object.keys(L4Data.children).some((L5) => L5.toLowerCase().includes(filters.L5.toLowerCase())) &&
+      Object.values(L4Data.children).some((L5Data) =>
+        Object.keys(L5Data.children).some((L6) => L6.toLowerCase().includes(filters.L6.toLowerCase()))
+      )
+    );
+    setFilteredData(Object.fromEntries(filtered));
   };
 
   return (
     <div>
       <div className="filter-container">
-        <input placeholder="Filter L4 Managers" value={l4Filter} onChange={(e) => setL4Filter(e.target.value)} />
-        <input placeholder="Filter L5 Managers" value={l5Filter} onChange={(e) => setL5Filter(e.target.value)} />
-        <input placeholder="Filter L6 Managers" value={l6Filter} onChange={(e) => setL6Filter(e.target.value)} />
+        <input placeholder="Filter L4" onChange={(e) => handleFilterChange("L4", e.target.value)} />
+        <input placeholder="Filter L5" onChange={(e) => handleFilterChange("L5", e.target.value)} />
+        <input placeholder="Filter L6" onChange={(e) => handleFilterChange("L6", e.target.value)} />
         <button onClick={applyFilter}>Apply Filter</button>
       </div>
       <table className="manager-table">
@@ -104,41 +89,13 @@ const Table = () => {
           </tr>
         </thead>
         <tbody>
-          {Object.entries(filteredData).map(([L4, L4Data]) => (
-            <React.Fragment key={L4}>
-              <tr>
-                <td>
-                  <button onClick={() => toggleRow(L4)}>{expandedRows[L4] ? "−" : "+"}</button>
-                  {L4}
-                </td>
-                <td>{L4Data.repoCount}</td>
-                <td>{L4Data.projectCount}</td>
-                <td>{L4Data.csiCount}</td>
-              </tr>
-              {expandedRows[L4] &&
-                Object.entries(L4Data.children).map(([L5, L5Data]) => (
-                  <React.Fragment key={L5}>
-                    <tr className="sub-row">
-                      <td>
-                        <button onClick={() => toggleRow(L5)}>{expandedRows[L5] ? "−" : "+"}</button>
-                        └ {L5}
-                      </td>
-                      <td>{L5Data.repoCount}</td>
-                      <td>{L5Data.projectCount}</td>
-                      <td>{L5Data.csiCount}</td>
-                    </tr>
-                    {expandedRows[L5] &&
-                      Object.entries(L5Data.children).map(([L6, L6Data]) => (
-                        <tr key={L6} className="sub-sub-row">
-                          <td> └── {L6}</td>
-                          <td>{L6Data.repoCount}</td>
-                          <td>{L6Data.projectCount}</td>
-                          <td>{L6Data.csiCount}</td>
-                        </tr>
-                      ))}
-                  </React.Fragment>
-                ))}
-            </React.Fragment>
+          {Object.entries(filteredData.length ? filteredData : data).map(([L4, L4Data]) => (
+            <tr key={L4}>
+              <td>{L4}</td>
+              <td>{L4Data.repoCount}</td>
+              <td>{L4Data.projectCount}</td>
+              <td>{L4Data.csiCount}</td>
+            </tr>
           ))}
         </tbody>
       </table>
