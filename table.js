@@ -98,43 +98,48 @@ const Table = () => {
     setExpandedRows((prev) => ({ ...prev, [manager]: !prev[manager] }));
   };
 
-  const getL5ChartData = () => {
+  // Prepare data for charts
+  const getChartData = () => {
     const l5Managers = [];
     const repoCounts = [];
     const projectCounts = [];
 
-    Object.values(data).forEach((L4Data) => {
-      Object.entries(L4Data.children).forEach(([L5, L5Data]) => {
-        l5Managers.push(L5);
-        repoCounts.push(L5Data.repoCount);
-        projectCounts.push(L5Data.projectCount);
+    Object.values(data).forEach((l4Data) => {
+      Object.entries(l4Data.children).forEach(([l5, l5Data]) => {
+        l5Managers.push(l5);
+        repoCounts.push(l5Data.repoCount);
+        projectCounts.push(l5Data.projectCount);
       });
     });
 
     return { l5Managers, repoCounts, projectCounts };
   };
 
-  const { l5Managers, repoCounts, projectCounts } = getL5ChartData();
+  const { l5Managers, repoCounts, projectCounts } = getChartData();
 
-  const barChartData = {
+  const barData = {
     labels: l5Managers,
     datasets: [
       {
         label: "Repo Count",
         data: repoCounts,
         backgroundColor: "rgba(75, 192, 192, 0.6)",
+        borderColor: "rgba(75, 192, 192, 1)",
+        borderWidth: 1,
       },
     ],
   };
 
-  const lineChartData = {
+  const lineData = {
     labels: l5Managers,
     datasets: [
       {
-        label: "Unique Projects Count",
+        label: "Unique Projects",
         data: projectCounts,
-        borderColor: "rgba(255, 99, 132, 0.6)",
         fill: false,
+        borderColor: "rgba(255, 99, 132, 1)",
+        backgroundColor: "rgba(255, 99, 132, 0.6)",
+        tension: 0.4,
       },
     ],
   };
@@ -142,13 +147,13 @@ const Table = () => {
   return (
     <div>
       <div className="chart-container">
-        <h3>L5 Managers and Repo Count (Bar Chart)</h3>
-        <Bar data={barChartData} />
-
-        <h3>L5 Managers and Unique Projects Count (Line Chart)</h3>
-        <Line data={lineChartData} />
+        <div className="chart-box">
+          <Bar data={barData} options={{ responsive: true, maintainAspectRatio: true }} />
+        </div>
+        <div className="chart-box">
+          <Line data={lineData} options={{ responsive: true, maintainAspectRatio: true }} />
+        </div>
       </div>
-
       <table className="manager-table">
         <thead>
           <tr>
@@ -175,7 +180,7 @@ const Table = () => {
               {expandedRows[L4] &&
                 Object.entries(L4Data.children).map(([L5, L5Data]) => (
                   <tr key={L5} className="sub-row">
-                    <td>└ {L5}</td>
+                    <td> └ {L5}</td>
                     <td>{L5Data.repoCount}</td>
                     <td>{L5Data.projectCount}</td>
                     <td>{L5Data.csiCount}</td>
