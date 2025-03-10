@@ -26,7 +26,7 @@ const Table = () => {
     const hierarchy = {};
 
     rows.forEach(({ "L4 Manager": L4, "L5 Manager": L5, "L6 Manager": L6, repositories, projects, "CSI ID": csiId }) => {
-      if (!L4) return; // Skip rows without an L4 Manager
+      if (!L4) return;
 
       if (!hierarchy[L4]) {
         hierarchy[L4] = { repoCount: 0, projectCount: new Set(), csiCount: new Set(), children: {} };
@@ -79,14 +79,64 @@ const Table = () => {
     setExpandedRows((prev) => ({ ...prev, [manager]: !prev[manager] }));
   };
 
+  const filterHierarchy = (node, query) => {
+    const lowerQuery = query.toLowerCase();
+    const filteredChildren = Object.fromEntries(
+      Object.entries(node.children || {}).map(([childName, childNode]) => [childName, filterHierarchy(childNode, query)])
+    );
+
+    const hasMatchingChild = Object.keys(filteredChildren).length > 0;
+    const isMatching = node && node.repoCount && node.name?.toLowerCase().includes(lowerQuery);
+
+    if (isMatching || hasMatchingChild) {
+      return { ...node, children: filteredChildren };
+    }
+
+    return null;
+  };
+
+  const expandFilteredRows = (node, query) => {
+    const lowerQuery = query.toLowerCase();
+    const filteredChildren = Object.fromEntries(
+      Object.entries(node.children || {}).map(([childName, childNode]) => [childName, expandFilteredRows(childNode, query)])
+    );
+
+    const hasMatchingChild = Object.keys(filteredChildren).length > 0;
+    const isMatching = node && node.repoCount && node.name?.toLowerCase().includes(lowerQuery);
+
+    if (isMatching || hasMatchingChild) {
+      return true;
+    }
+
+    return false;
+  };
+
   const handleFilterChange = (event) => {
-    const value = event.target.value.toLowerCase();
+    const value = event.target.value;
     setFilter(value);
 
+    if (!value) {
+      setFilteredData(data);
+      setExpandedRows({});
+      return;
+    }
+
     const filtered = Object.fromEntries(
-      Object.entries(data).filter(([L4]) => L4.toLowerCase().includes(value))
+      Object.entries(data).map(([manager, managerData]) => {
+        const filteredManager = filterHierarchy(managerData, value);
+        return filteredManager ? [manager, filteredManager] : null;
+      }).filter(Boolean)
     );
+
+    const newExpandedRows = {};
+    Object.entries(data).forEach(([manager, managerData]) => {
+      if (expandFilteredRows(managerData, value)) {
+        newExpandedRows[manager] = true;
+      }
+    });
+
     setFilteredData(filtered);
+    setExpandedRows(newExpandedRows);
   };
 
   return (
