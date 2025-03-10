@@ -1,11 +1,32 @@
 import React, { useState, useEffect } from "react";
 import * as XLSX from "xlsx";
+import { Bar, Line } from "react-chartjs-2";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  PointElement,
+} from "chart.js";
 import "./styles.css";
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  PointElement
+);
 
 const Table = () => {
   const [data, setData] = useState({});
-  const [filteredData, setFilteredData] = useState({});
-  const [filter, setFilter] = useState("");
   const [expandedRows, setExpandedRows] = useState({});
 
   useEffect(() => {
@@ -15,9 +36,7 @@ const Table = () => {
         const workbook = XLSX.read(buffer, { type: "array" });
         const sheetName = workbook.SheetNames[0];
         const sheet = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
-        const hierarchy = processData(sheet);
-        setData(hierarchy);
-        setFilteredData(hierarchy); // Initially set filtered data as full data
+        setData(processData(sheet));
       })
       .catch((error) => console.error("Error loading Excel:", error));
   }, []);
@@ -79,75 +98,57 @@ const Table = () => {
     setExpandedRows((prev) => ({ ...prev, [manager]: !prev[manager] }));
   };
 
-  const filterHierarchy = (node, query) => {
-    const lowerQuery = query.toLowerCase();
-    const filteredChildren = Object.fromEntries(
-      Object.entries(node.children || {}).map(([childName, childNode]) => [childName, filterHierarchy(childNode, query)])
-    );
+  const getL5ChartData = () => {
+    const l5Managers = [];
+    const repoCounts = [];
+    const projectCounts = [];
 
-    const hasMatchingChild = Object.keys(filteredChildren).length > 0;
-    const isMatching = node && node.repoCount && node.name?.toLowerCase().includes(lowerQuery);
-
-    if (isMatching || hasMatchingChild) {
-      return { ...node, children: filteredChildren };
-    }
-
-    return null;
-  };
-
-  const expandFilteredRows = (node, query) => {
-    const lowerQuery = query.toLowerCase();
-    const filteredChildren = Object.fromEntries(
-      Object.entries(node.children || {}).map(([childName, childNode]) => [childName, expandFilteredRows(childNode, query)])
-    );
-
-    const hasMatchingChild = Object.keys(filteredChildren).length > 0;
-    const isMatching = node && node.repoCount && node.name?.toLowerCase().includes(lowerQuery);
-
-    if (isMatching || hasMatchingChild) {
-      return true;
-    }
-
-    return false;
-  };
-
-  const handleFilterChange = (event) => {
-    const value = event.target.value;
-    setFilter(value);
-
-    if (!value) {
-      setFilteredData(data);
-      setExpandedRows({});
-      return;
-    }
-
-    const filtered = Object.fromEntries(
-      Object.entries(data).map(([manager, managerData]) => {
-        const filteredManager = filterHierarchy(managerData, value);
-        return filteredManager ? [manager, filteredManager] : null;
-      }).filter(Boolean)
-    );
-
-    const newExpandedRows = {};
-    Object.entries(data).forEach(([manager, managerData]) => {
-      if (expandFilteredRows(managerData, value)) {
-        newExpandedRows[manager] = true;
-      }
+    Object.values(data).forEach((L4Data) => {
+      Object.entries(L4Data.children).forEach(([L5, L5Data]) => {
+        l5Managers.push(L5);
+        repoCounts.push(L5Data.repoCount);
+        projectCounts.push(L5Data.projectCount);
+      });
     });
 
-    setFilteredData(filtered);
-    setExpandedRows(newExpandedRows);
+    return { l5Managers, repoCounts, projectCounts };
+  };
+
+  const { l5Managers, repoCounts, projectCounts } = getL5ChartData();
+
+  const barChartData = {
+    labels: l5Managers,
+    datasets: [
+      {
+        label: "Repo Count",
+        data: repoCounts,
+        backgroundColor: "rgba(75, 192, 192, 0.6)",
+      },
+    ],
+  };
+
+  const lineChartData = {
+    labels: l5Managers,
+    datasets: [
+      {
+        label: "Unique Projects Count",
+        data: projectCounts,
+        borderColor: "rgba(255, 99, 132, 0.6)",
+        fill: false,
+      },
+    ],
   };
 
   return (
     <div>
-      <input
-        type="text"
-        placeholder="Filter by Manager Name"
-        value={filter}
-        onChange={handleFilterChange}
-        className="filter-input"
-      />
+      <div className="chart-container">
+        <h3>L5 Managers and Repo Count (Bar Chart)</h3>
+        <Bar data={barChartData} />
+
+        <h3>L5 Managers and Unique Projects Count (Line Chart)</h3>
+        <Line data={lineChartData} />
+      </div>
+
       <table className="manager-table">
         <thead>
           <tr>
@@ -158,7 +159,7 @@ const Table = () => {
           </tr>
         </thead>
         <tbody>
-          {Object.entries(filteredData).map(([L4, L4Data]) => (
+          {Object.entries(data).map(([L4, L4Data]) => (
             <React.Fragment key={L4}>
               <tr>
                 <td>
@@ -173,28 +174,12 @@ const Table = () => {
               </tr>
               {expandedRows[L4] &&
                 Object.entries(L4Data.children).map(([L5, L5Data]) => (
-                  <React.Fragment key={L5}>
-                    <tr className="sub-row">
-                      <td>
-                        <button className="expand-btn" onClick={() => toggleRow(L5)}>
-                          {expandedRows[L5] ? "−" : "+"}
-                        </button>
-                        └ {L5}
-                      </td>
-                      <td>{L5Data.repoCount}</td>
-                      <td>{L5Data.projectCount}</td>
-                      <td>{L5Data.csiCount}</td>
-                    </tr>
-                    {expandedRows[L5] &&
-                      Object.entries(L5Data.children).map(([L6, L6Data]) => (
-                        <tr key={L6} className="sub-sub-row">
-                          <td> └── {L6}</td>
-                          <td>{L6Data.repoCount}</td>
-                          <td>{L6Data.projectCount}</td>
-                          <td>{L6Data.csiCount}</td>
-                        </tr>
-                      ))}
-                  </React.Fragment>
+                  <tr key={L5} className="sub-row">
+                    <td>└ {L5}</td>
+                    <td>{L5Data.repoCount}</td>
+                    <td>{L5Data.projectCount}</td>
+                    <td>{L5Data.csiCount}</td>
+                  </tr>
                 ))}
             </React.Fragment>
           ))}
