@@ -15,9 +15,9 @@ const Table = () => {
         const workbook = XLSX.read(buffer, { type: "array" });
         const sheetName = workbook.SheetNames[0];
         const sheet = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
-        const hierarchy = processData(sheet);
-        setData(hierarchy);
-        setFilteredData(hierarchy);
+        const processed = processData(sheet);
+        setData(processed);
+        setFilteredData(processed);
       })
       .catch((error) => console.error("Error loading Excel:", error));
   }, []);
@@ -58,58 +58,54 @@ const Table = () => {
     return hierarchy;
   };
 
+  const toggleRow = (manager) => {
+    setExpandedRows((prev) => ({ ...prev, [manager]: !prev[manager] }));
+  };
+
+  const applyFilter = () => {
+    let result = { ...data };
+    Object.keys(filters).forEach((level) => {
+      if (filters[level]) {
+        result = Object.fromEntries(
+          Object.entries(result).filter(([key]) => key.includes(filters[level]))
+        );
+        setExpandedRows({ ...expandedRows, [filters[level]]: true });
+      }
+    });
+    setFilteredData(result);
+  };
+
   const handleFilterChange = (level, value) => {
     setFilters((prev) => ({ ...prev, [level]: value }));
   };
 
-  const applyFilter = () => {
-    const filtered = Object.entries(data).filter(([L4, L4Data]) => {
-      const matchL4 = !filters.L4 || L4.includes(filters.L4);
-      const children = Object.entries(L4Data.children).filter(([L5]) =>
-        !filters.L5 || L5.includes(filters.L5)
-      );
-      L4Data.children = Object.fromEntries(children);
-
-      Object.values(L4Data.children).forEach((L5Data) => {
-        const L6Children = Object.entries(L5Data.children).filter(([L6]) =>
-          !filters.L6 || L6.includes(filters.L6)
-        );
-        L5Data.children = Object.fromEntries(L6Children);
+  const getUniqueManagers = (level) => {
+    const managers = new Set();
+    Object.keys(data).forEach((L4) => {
+      if (level === "L4") managers.add(L4);
+      Object.keys(data[L4].children || {}).forEach((L5) => {
+        if (level === "L5") managers.add(L5);
+        Object.keys(data[L4].children[L5].children || {}).forEach((L6) => {
+          if (level === "L6") managers.add(L6);
+        });
       });
-
-      return matchL4;
     });
-    setFilteredData(Object.fromEntries(filtered));
-  };
-
-  const toggleRow = (manager) => {
-    setExpandedRows((prev) => ({ ...prev, [manager]: !prev[manager] }));
+    return Array.from(managers);
   };
 
   return (
     <div>
       <div className="filter-container">
-        <select onChange={(e) => handleFilterChange("L4", e.target.value)}>
-          <option value="">Select L4 Manager</option>
-          {Object.keys(data).map((L4) => (
-            <option key={L4} value={L4}>{L4}</option>
-          ))}
-        </select>
-        <select onChange={(e) => handleFilterChange("L5", e.target.value)}>
-          <option value="">Select L5 Manager</option>
-          {Object.values(data).flatMap((L4Data) => Object.keys(L4Data.children)).map((L5) => (
-            <option key={L5} value={L5}>{L5}</option>
-          ))}
-        </select>
-        <select onChange={(e) => handleFilterChange("L6", e.target.value)}>
-          <option value="">Select L6 Manager</option>
-          {Object.values(data).flatMap((L4Data) => Object.values(L4Data.children).flatMap((L5Data) => Object.keys(L5Data.children))).map((L6) => (
-            <option key={L6} value={L6}>{L6}</option>
-          ))}
-        </select>
+        {Object.keys(filters).map((level) => (
+          <select key={level} onChange={(e) => handleFilterChange(level, e.target.value)}>
+            <option value="">Select {level} Manager</option>
+            {getUniqueManagers(level).map((manager) => (
+              <option key={manager} value={manager}>{manager}</option>
+            ))}
+          </select>
+        ))}
         <button onClick={applyFilter}>Apply Filter</button>
       </div>
-
       <table className="manager-table">
         <thead>
           <tr>
@@ -124,10 +120,7 @@ const Table = () => {
             <>
               <tr key={L4}>
                 <td>
-                  <button className="expand-btn" onClick={() => toggleRow(L4)}>
-                    {expandedRows[L4] ? "−" : "+"}
-                  </button>
-                  {L4}
+                  <button className="expand-btn" onClick={() => toggleRow(L4)}>{expandedRows[L4] ? "−" : "+"}</button> {L4}
                 </td>
                 <td>{L4Data.repoCount}</td>
                 <td>{L4Data.projectCount}</td>
@@ -137,16 +130,19 @@ const Table = () => {
                 Object.entries(L4Data.children).map(([L5, L5Data]) => (
                   <>
                     <tr key={L5} className="sub-row">
-                      <td>
-                        <button className="expand-btn" onClick={() => toggleRow(L5)}>
-                          {expandedRows[L5] ? "−" : "+"}
-                        </button>
-                        └ {L5}
-                      </td>
+                      <td>└ {L5}</td>
                       <td>{L5Data.repoCount}</td>
                       <td>{L5Data.projectCount}</td>
                       <td>{L5Data.csiCount}</td>
                     </tr>
+                    {Object.entries(L5Data.children || {}).map(([L6, L6Data]) => (
+                      <tr key={L6} className="sub-sub-row">
+                        <td> └── {L6}</td>
+                        <td>{L6Data.repoCount}</td>
+                        <td>{L6Data.projectCount}</td>
+                        <td>{L6Data.csiCount}</td>
+                      </tr>
+                    ))}
                   </>
                 ))}
             </>
