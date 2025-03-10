@@ -5,92 +5,144 @@ import "./styles.css";
 const Table = () => {
   const [data, setData] = useState([]);
   const [expandedRows, setExpandedRows] = useState({});
+  const [l4Filter, setL4Filter] = useState("");
+  const [l5Filter, setL5Filter] = useState("");
+  const [l6Filter, setL6Filter] = useState("");
+  const [filteredData, setFilteredData] = useState([]);
 
   useEffect(() => {
-    // Load and parse the Excel file
-    fetch("/data/managers.xlsx") // Ensure this matches your file name
+    fetch("/data/managers.xlsx")
       .then((res) => res.arrayBuffer())
       .then((buffer) => {
         const workbook = XLSX.read(buffer, { type: "array" });
         const sheetName = workbook.SheetNames[0];
         const sheet = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
-        setData(processData(sheet));
+        const processedData = processData(sheet);
+        setData(processedData);
+        setFilteredData(processedData);
       })
       .catch((error) => console.error("Error loading Excel:", error));
   }, []);
 
-  // Process data to group repositories under each manager level
   const processData = (rows) => {
     const hierarchy = {};
-    
-    rows.forEach(({ "L4 Manager": L4, "L5 Manager": L5, "L6 Manager": L6, repositories }) => {
-      if (!hierarchy[L4]) hierarchy[L4] = { count: 0, children: {} };
-      hierarchy[L4].count += 1;
+
+    rows.forEach(({ "L4 Manager": L4, "L5 Manager": L5, "L6 Manager": L6, repositories, projects, "CSI ID": csiId }) => {
+      if (!hierarchy[L4]) hierarchy[L4] = { repoCount: 0, projectCount: new Set(), csiCount: new Set(), children: {} };
+      hierarchy[L4].repoCount += 1;
+      hierarchy[L4].projectCount.add(projects);
+      hierarchy[L4].csiCount.add(csiId);
 
       if (L5) {
-        if (!hierarchy[L4].children[L5]) hierarchy[L4].children[L5] = { count: 0, children: {} };
-        hierarchy[L4].children[L5].count += 1;
+        if (!hierarchy[L4].children[L5]) hierarchy[L4].children[L5] = { repoCount: 0, projectCount: new Set(), csiCount: new Set(), children: {} };
+        hierarchy[L4].children[L5].repoCount += 1;
+        hierarchy[L4].children[L5].projectCount.add(projects);
+        hierarchy[L4].children[L5].csiCount.add(csiId);
 
         if (L6) {
-          if (!hierarchy[L4].children[L5].children[L6]) hierarchy[L4].children[L5].children[L6] = { count: 0 };
-          hierarchy[L4].children[L5].children[L6].count += 1;
+          if (!hierarchy[L4].children[L5].children[L6]) hierarchy[L4].children[L5].children[L6] = { repoCount: 0, projectCount: new Set(), csiCount: new Set() };
+          hierarchy[L4].children[L5].children[L6].repoCount += 1;
+          hierarchy[L4].children[L5].children[L6].projectCount.add(projects);
+          hierarchy[L4].children[L5].children[L6].csiCount.add(csiId);
         }
       }
     });
 
+    const convertCounts = (node) => {
+      node.projectCount = node.projectCount.size;
+      node.csiCount = node.csiCount.size;
+      if (node.children) {
+        Object.values(node.children).forEach(convertCounts);
+      }
+    };
+    Object.values(hierarchy).forEach(convertCounts);
+
     return hierarchy;
   };
 
-  // Toggle expansion of a row
+  const applyFilter = () => {
+    const filtered = Object.entries(data).reduce((acc, [L4, L4Data]) => {
+      if (L4.toLowerCase().includes(l4Filter.toLowerCase())) {
+        const filteredChildren = Object.entries(L4Data.children).reduce((childAcc, [L5, L5Data]) => {
+          if (L5.toLowerCase().includes(l5Filter.toLowerCase())) {
+            const filteredGrandChildren = Object.entries(L5Data.children).reduce((grandChildAcc, [L6, L6Data]) => {
+              if (L6.toLowerCase().includes(l6Filter.toLowerCase())) {
+                grandChildAcc[L6] = L6Data;
+              }
+              return grandChildAcc;
+            }, {});
+            childAcc[L5] = { ...L5Data, children: filteredGrandChildren };
+          }
+          return childAcc;
+        }, {});
+        acc[L4] = { ...L4Data, children: filteredChildren };
+      }
+      return acc;
+    }, {});
+    setFilteredData(filtered);
+  };
+
   const toggleRow = (manager) => {
     setExpandedRows((prev) => ({ ...prev, [manager]: !prev[manager] }));
   };
 
   return (
-    <table className="manager-table">
-      <thead>
-        <tr>
-          <th>Manager</th>
-          <th>Repo Count</th>
-        </tr>
-      </thead>
-      <tbody>
-        {Object.entries(data).map(([L4, L4Data]) => (
-          <>
-            <tr key={L4}>
-              <td>
-                <button className="expand-btn" onClick={() => toggleRow(L4)}>
-                  {expandedRows[L4] ? "−" : "+"}
-                </button>
-                {L4}
-              </td>
-              <td>{L4Data.count}</td>
-            </tr>
-            {expandedRows[L4] &&
-              Object.entries(L4Data.children).map(([L5, L5Data]) => (
-                <>
-                  <tr key={L5} className="sub-row">
-                    <td>
-                      <button className="expand-btn" onClick={() => toggleRow(L5)}>
-                        {expandedRows[L5] ? "−" : "+"}
-                      </button>
-                      └ {L5}
-                    </td>
-                    <td>{L5Data.count}</td>
-                  </tr>
-                  {expandedRows[L5] &&
-                    Object.entries(L5Data.children).map(([L6, L6Data]) => (
-                      <tr key={L6} className="sub-sub-row">
-                        <td> └── {L6}</td>
-                        <td>{L6Data.count}</td>
-                      </tr>
-                    ))}
-                </>
-              ))}
-          </>
-        ))}
-      </tbody>
-    </table>
+    <div>
+      <div className="filter-container">
+        <input placeholder="Filter L4 Managers" value={l4Filter} onChange={(e) => setL4Filter(e.target.value)} />
+        <input placeholder="Filter L5 Managers" value={l5Filter} onChange={(e) => setL5Filter(e.target.value)} />
+        <input placeholder="Filter L6 Managers" value={l6Filter} onChange={(e) => setL6Filter(e.target.value)} />
+        <button onClick={applyFilter}>Apply Filter</button>
+      </div>
+      <table className="manager-table">
+        <thead>
+          <tr>
+            <th>Manager</th>
+            <th>Repo Count</th>
+            <th>Project Count</th>
+            <th>CSI ID Count</th>
+          </tr>
+        </thead>
+        <tbody>
+          {Object.entries(filteredData).map(([L4, L4Data]) => (
+            <React.Fragment key={L4}>
+              <tr>
+                <td>
+                  <button onClick={() => toggleRow(L4)}>{expandedRows[L4] ? "−" : "+"}</button>
+                  {L4}
+                </td>
+                <td>{L4Data.repoCount}</td>
+                <td>{L4Data.projectCount}</td>
+                <td>{L4Data.csiCount}</td>
+              </tr>
+              {expandedRows[L4] &&
+                Object.entries(L4Data.children).map(([L5, L5Data]) => (
+                  <React.Fragment key={L5}>
+                    <tr className="sub-row">
+                      <td>
+                        <button onClick={() => toggleRow(L5)}>{expandedRows[L5] ? "−" : "+"}</button>
+                        └ {L5}
+                      </td>
+                      <td>{L5Data.repoCount}</td>
+                      <td>{L5Data.projectCount}</td>
+                      <td>{L5Data.csiCount}</td>
+                    </tr>
+                    {expandedRows[L5] &&
+                      Object.entries(L5Data.children).map(([L6, L6Data]) => (
+                        <tr key={L6} className="sub-sub-row">
+                          <td> └── {L6}</td>
+                          <td>{L6Data.repoCount}</td>
+                          <td>{L6Data.projectCount}</td>
+                          <td>{L6Data.csiCount}</td>
+                        </tr>
+                      ))}
+                  </React.Fragment>
+                ))}
+            </React.Fragment>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 };
 
