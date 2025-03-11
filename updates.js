@@ -34,3 +34,18 @@ const chartOptions2 = {
     },
   },
 };
+
+//css
+
+.chart-box2 {
+  backGround-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px;
+  height: 500px;
+  padding: 10px;
+  width: 88%;
+  display: flex;
+  justify-content: center;
+  margin: auto;
+  margin-bottom: 20px;
+}
