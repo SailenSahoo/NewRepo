@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import * as XLSX from "xlsx";
-import { Bar } from "react-chartjs-2";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -8,22 +7,18 @@ import {
   BarElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
 } from "chart.js";
+import { Bar } from "react-chartjs-2";
 import "./styles.css";
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend
-);
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 const Table = () => {
   const [data, setData] = useState({});
   const [expandedRows, setExpandedRows] = useState({});
+  const [chartDataMD, setChartDataMD] = useState({});
+  const [chartDataReportees, setChartDataReportees] = useState({});
 
   useEffect(() => {
     fetch("/data/managers.xlsx")
@@ -32,7 +27,9 @@ const Table = () => {
         const workbook = XLSX.read(buffer, { type: "array" });
         const sheetName = workbook.SheetNames[0];
         const sheet = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
-        setData(processData(sheet));
+        const processedData = processData(sheet);
+        setData(processedData);
+        generateChartData(processedData);
       })
       .catch((error) => console.error("Error loading Excel:", error));
   }, []);
@@ -40,60 +37,101 @@ const Table = () => {
   const processData = (rows) => {
     const hierarchy = {};
 
-    rows.forEach(({ "Managing Director": MD, Reportees, "Total CSI": csi, "Total BB Repos": bbRepos, "Total GHE Repos": gheRepos }) => {
-      if (!MD) return;
+    rows.forEach(
+      ({
+        "Managing Director": MD,
+        Reportees,
+        "Total CSI": csi,
+        "Total BB Repos": bbRepos,
+        "Total GHE Repos": gheRepos,
+      }) => {
+        if (!MD) return;
 
-      if (!hierarchy[MD]) {
-        hierarchy[MD] = { csi: 0, bbRepos: 0, gheRepos: 0, children: {} };
+        if (!hierarchy[MD]) {
+          hierarchy[MD] = { csi: 0, bbRepos: 0, gheRepos: 0, children: {} };
+        }
+
+        hierarchy[MD].csi += csi;
+        hierarchy[MD].bbRepos += bbRepos;
+        hierarchy[MD].gheRepos += gheRepos;
+
+        if (Reportees) {
+          hierarchy[MD].children[Reportees] = { csi, bbRepos, gheRepos };
+        }
       }
-
-      hierarchy[MD].csi += csi;
-      hierarchy[MD].bbRepos += bbRepos;
-      hierarchy[MD].gheRepos += gheRepos;
-
-      if (Reportees) {
-        hierarchy[MD].children[Reportees] = { csi, bbRepos, gheRepos };
-      }
-    });
+    );
 
     return hierarchy;
+  };
+
+  const generateChartData = (hierarchy) => {
+    const MDLabels = [];
+    const MDRepoBB = [];
+    const MDRepoGHE = [];
+
+    const ReporteeLabels = [];
+    const ReporteeRepoBB = [];
+    const ReporteeRepoGHE = [];
+
+    Object.entries(hierarchy).forEach(([MD, MDData]) => {
+      MDLabels.push(MD);
+      MDRepoBB.push(MDData.bbRepos);
+      MDRepoGHE.push(MDData.gheRepos);
+
+      Object.entries(MDData.children).forEach(([reportee, reporteeData]) => {
+        ReporteeLabels.push(reportee);
+        ReporteeRepoBB.push(reporteeData.bbRepos);
+        ReporteeRepoGHE.push(reporteeData.gheRepos);
+      });
+    });
+
+    setChartDataMD({
+      labels: MDLabels,
+      datasets: [
+        {
+          label: "BB Repos",
+          data: MDRepoBB,
+          backgroundColor: "rgba(255, 99, 132, 0.5)",
+        },
+        {
+          label: "GHE Repos",
+          data: MDRepoGHE,
+          backgroundColor: "rgba(54, 162, 235, 0.5)",
+        },
+      ],
+    });
+
+    setChartDataReportees({
+      labels: ReporteeLabels,
+      datasets: [
+        {
+          label: "BB Repos",
+          data: ReporteeRepoBB,
+          backgroundColor: "rgba(255, 99, 132, 0.5)",
+        },
+        {
+          label: "GHE Repos",
+          data: ReporteeRepoGHE,
+          backgroundColor: "rgba(54, 162, 235, 0.5)",
+        },
+      ],
+    });
   };
 
   const toggleRow = (director) => {
     setExpandedRows((prev) => ({ ...prev, [director]: !prev[director] }));
   };
 
-  const chartData = {
-    labels: Object.keys(data),
-    datasets: [
-      {
-        label: "BB Repo Count",
-        backgroundColor: "#FF6384",
-        data: Object.values(data).map((item) => item.bbRepos),
-      },
-      {
-        label: "GHE Repo Count",
-        backgroundColor: "#36A2EB",
-        data: Object.values(data).map((item) => item.gheRepos),
-      },
-    ],
-  };
-
-  const chartOptions = {
-    responsive: true,
-    plugins: {
-      legend: {
-        position: "top",
-      },
-      title: {
-        display: true,
-        text: "BB Repo Count vs GHE Repo Count",
-      },
-    },
-  };
-
   return (
-    <div>
+    <>
+      <div className="chart-container">
+        <h3>Managing Director Repo Count</h3>
+        <Bar data={chartDataMD} />
+      </div>
+      <div className="chart-container">
+        <h3>Reportee Repo Count</h3>
+        <Bar data={chartDataReportees} />
+      </div>
       <table className="manager-table">
         <thead>
           <tr>
@@ -108,7 +146,10 @@ const Table = () => {
             <React.Fragment key={MD}>
               <tr>
                 <td>
-                  <button className="expand-btn" onClick={() => toggleRow(MD)}>
+                  <button
+                    className="expand-btn"
+                    onClick={() => toggleRow(MD)}
+                  >
                     {expandedRows[MD] ? "−" : "+"}
                   </button>
                   {MD}
@@ -118,22 +159,21 @@ const Table = () => {
                 <td>{MDData.gheRepos}</td>
               </tr>
               {expandedRows[MD] &&
-                Object.entries(MDData.children).map(([reportee, reporteeData]) => (
-                  <tr key={reportee} className="sub-row">
-                    <td> └ {reportee}</td>
-                    <td>{reporteeData.csi}</td>
-                    <td>{reporteeData.bbRepos}</td>
-                    <td>{reporteeData.gheRepos}</td>
-                  </tr>
-                ))}
+                Object.entries(MDData.children).map(
+                  ([reportee, reporteeData]) => (
+                    <tr key={reportee} className="sub-row">
+                      <td> └ {reportee}</td>
+                      <td>{reporteeData.csi}</td>
+                      <td>{reporteeData.bbRepos}</td>
+                      <td>{reporteeData.gheRepos}</td>
+                    </tr>
+                  )
+                )}
             </React.Fragment>
           ))}
         </tbody>
       </table>
-      <div className="chart-container">
-        <Bar data={chartData} options={chartOptions} />
-      </div>
-    </div>
+    </>
   );
 };
 
