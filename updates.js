@@ -8,18 +8,19 @@ const chartData2 = {
       label: "BB Repo Count",
       backgroundColor: "#FF6384",
       data: Object.entries(data).flatMap(([_, MDData]) =>
-        Object.values(MDData.children).map((child) => child.bbRepos || 0)
+        Object.values(MDData.children).map((child) => child.bbRepos)
       ),
     },
     {
       label: "GHE Repo Count",
       backgroundColor: "#36A2EB",
       data: Object.entries(data).flatMap(([_, MDData]) =>
-        Object.values(MDData.children).map((child) => child.gheRepos || 0)
+        Object.values(MDData.children).map((child) => child.gheRepos)
       ),
     },
   ],
 };
+
 
 const chartOptions2 = {
   responsive: true,
