@@ -38,14 +38,15 @@ const chartOptions2 = {
 //css
 
 .chart-box2 {
-  backGround-color: white;
+  background-color: white;
   border-radius: 8px;
   box-shadow: 0 2px 4px;
-  height: 500px;
+  height: 800px; /* Increased height for better visibility */
   padding: 10px;
-  width: 88%;
+  width: 95%; /* Slightly increased width */
   display: flex;
   justify-content: center;
   margin: auto;
   margin-bottom: 20px;
+  overflow-y: auto; /* Enable vertical scroll if needed */
 }
