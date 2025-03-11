@@ -1,6 +1,25 @@
 import React, { useState, useEffect } from "react";
 import * as XLSX from "xlsx";
+import { Bar } from "react-chartjs-2";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+} from "chart.js";
 import "./styles.css";
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 const Table = () => {
   const [data, setData] = useState({});
@@ -21,113 +40,100 @@ const Table = () => {
   const processData = (rows) => {
     const hierarchy = {};
 
-    rows.forEach(({ "L4 Manager": L4, "L5 Manager": L5, "L6 Manager": L6, repositories, projects, "CSI ID": csiId }) => {
-      if (!L4) return; // Skip rows without an L4 Manager
+    rows.forEach(({ "Managing Director": MD, Reportees, "Total CSI": csi, "Total BB Repos": bbRepos, "Total GHE Repos": gheRepos }) => {
+      if (!MD) return;
 
-      if (!hierarchy[L4]) {
-        hierarchy[L4] = { repoCount: 0, projectCount: new Set(), csiCount: new Set(), children: {} };
+      if (!hierarchy[MD]) {
+        hierarchy[MD] = { csi: 0, bbRepos: 0, gheRepos: 0, children: {} };
       }
-      hierarchy[L4].repoCount += 1;
-      if (projects) hierarchy[L4].projectCount.add(projects);
-      if (csiId) hierarchy[L4].csiCount.add(csiId);
 
-      if (L5) {
-        if (!hierarchy[L4].children[L5]) {
-          hierarchy[L4].children[L5] = { repoCount: 0, projectCount: new Set(), csiCount: new Set(), children: {} };
-        }
-        hierarchy[L4].children[L5].repoCount += 1;
-        if (projects) hierarchy[L4].children[L5].projectCount.add(projects);
-        if (csiId) hierarchy[L4].children[L5].csiCount.add(csiId);
+      hierarchy[MD].csi += csi;
+      hierarchy[MD].bbRepos += bbRepos;
+      hierarchy[MD].gheRepos += gheRepos;
 
-        if (L6) {
-          if (!hierarchy[L4].children[L5].children[L6]) {
-            hierarchy[L4].children[L5].children[L6] = { repoCount: 0, projectCount: new Set(), csiCount: new Set() };
-          }
-          hierarchy[L4].children[L5].children[L6].repoCount += 1;
-          if (projects) hierarchy[L4].children[L5].children[L6].projectCount.add(projects);
-          if (csiId) hierarchy[L4].children[L5].children[L6].csiCount.add(csiId);
-        }
+      if (Reportees) {
+        hierarchy[MD].children[Reportees] = { csi, bbRepos, gheRepos };
       }
     });
-
-    const convertCounts = (node) => {
-      if (!node) return;
-
-      if (node.projectCount instanceof Set) {
-        node.projectCount = node.projectCount.size;
-      }
-
-      if (node.csiCount instanceof Set) {
-        node.csiCount = node.csiCount.size;
-      }
-
-      if (node.children && typeof node.children === "object") {
-        Object.values(node.children).forEach(convertCounts);
-      }
-    };
-
-    Object.values(hierarchy).forEach(convertCounts);
 
     return hierarchy;
   };
 
-  const toggleRow = (manager) => {
-    setExpandedRows((prev) => ({ ...prev, [manager]: !prev[manager] }));
+  const toggleRow = (director) => {
+    setExpandedRows((prev) => ({ ...prev, [director]: !prev[director] }));
+  };
+
+  const chartData = {
+    labels: Object.keys(data),
+    datasets: [
+      {
+        label: "BB Repo Count",
+        backgroundColor: "#FF6384",
+        data: Object.values(data).map((item) => item.bbRepos),
+      },
+      {
+        label: "GHE Repo Count",
+        backgroundColor: "#36A2EB",
+        data: Object.values(data).map((item) => item.gheRepos),
+      },
+    ],
+  };
+
+  const chartOptions = {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: "top",
+      },
+      title: {
+        display: true,
+        text: "BB Repo Count vs GHE Repo Count",
+      },
+    },
   };
 
   return (
-    <table className="manager-table">
-      <thead>
-        <tr>
-          <th>Manager</th>
-          <th>Repo Count</th>
-          <th>Project Count</th>
-          <th>CSI ID Count</th>
-        </tr>
-      </thead>
-      <tbody>
-        {Object.entries(data).map(([L4, L4Data]) => (
-          <React.Fragment key={L4}>
-            <tr>
-              <td>
-                <button className="expand-btn" onClick={() => toggleRow(L4)}>
-                  {expandedRows[L4] ? "−" : "+"}
-                </button>
-                {L4}
-              </td>
-              <td>{L4Data.repoCount}</td>
-              <td>{L4Data.projectCount}</td>
-              <td>{L4Data.csiCount}</td>
-            </tr>
-            {expandedRows[L4] &&
-              Object.entries(L4Data.children).map(([L5, L5Data]) => (
-                <React.Fragment key={L5}>
-                  <tr className="sub-row">
-                    <td>
-                      <button className="expand-btn" onClick={() => toggleRow(L5)}>
-                        {expandedRows[L5] ? "−" : "+"}
-                      </button>
-                      └ {L5}
-                    </td>
-                    <td>{L5Data.repoCount}</td>
-                    <td>{L5Data.projectCount}</td>
-                    <td>{L5Data.csiCount}</td>
+    <div>
+      <table className="manager-table">
+        <thead>
+          <tr>
+            <th>Managing Director</th>
+            <th>Total CSI</th>
+            <th>Total BB Repos</th>
+            <th>Total GHE Repos</th>
+          </tr>
+        </thead>
+        <tbody>
+          {Object.entries(data).map(([MD, MDData]) => (
+            <React.Fragment key={MD}>
+              <tr>
+                <td>
+                  <button className="expand-btn" onClick={() => toggleRow(MD)}>
+                    {expandedRows[MD] ? "−" : "+"}
+                  </button>
+                  {MD}
+                </td>
+                <td>{MDData.csi}</td>
+                <td>{MDData.bbRepos}</td>
+                <td>{MDData.gheRepos}</td>
+              </tr>
+              {expandedRows[MD] &&
+                Object.entries(MDData.children).map(([reportee, reporteeData]) => (
+                  <tr key={reportee} className="sub-row">
+                    <td> └ {reportee}</td>
+                    <td>{reporteeData.csi}</td>
+                    <td>{reporteeData.bbRepos}</td>
+                    <td>{reporteeData.gheRepos}</td>
                   </tr>
-                  {expandedRows[L5] &&
-                    Object.entries(L5Data.children).map(([L6, L6Data]) => (
-                      <tr key={L6} className="sub-sub-row">
-                        <td> └── {L6}</td>
-                        <td>{L6Data.repoCount}</td>
-                        <td>{L6Data.projectCount}</td>
-                        <td>{L6Data.csiCount}</td>
-                      </tr>
-                    ))}
-                </React.Fragment>
-              ))}
-          </React.Fragment>
-        ))}
-      </tbody>
-    </table>
+                ))}
+            </React.Fragment>
+          ))}
+        </tbody>
+      </table>
+      <div className="chart-container">
+        <Bar data={chartData} options={chartOptions} />
+      </div>
+    </div>
   );
 };
 
