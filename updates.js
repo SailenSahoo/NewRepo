@@ -22,8 +22,8 @@ const chartData2 = {
 };
 
 const chartOptions2 = {
-  indexAxis: "y", // Makes the chart horizontal
   responsive: true,
+  maintainAspectRatio: false,  // Allow the chart to stretch
   plugins: {
     legend: {
       position: "top",
@@ -33,7 +33,25 @@ const chartOptions2 = {
       text: "BB/GHE Repo Count Per Reportee",
     },
   },
+  scales: {
+    y: {
+      beginAtZero: true,
+      ticks: {
+        font: {
+          size: 14,  // Increase the label size for better readability
+        },
+      },
+    },
+    x: {
+      ticks: {
+        font: {
+          size: 12,  // Adjust as needed
+        },
+      },
+    },
+  },
 };
+
 
 //css
 
