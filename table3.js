@@ -13,49 +13,55 @@ export default function ReporteeTable() {
 
   useEffect(() => {
     const fetchData = async () => {
-      const response = await fetch("/data/managers.xlsx");
-      const arrayBuffer = await response.arrayBuffer();
-      const workbook = XLSX.read(arrayBuffer, { type: "array" });
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const jsonData = XLSX.utils.sheet_to_json(sheet);
+      try {
+        const response = await fetch("/data/managers.xlsx");
+        const arrayBuffer = await response.arrayBuffer();
+        const workbook = XLSX.read(arrayBuffer, { type: "array" });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData = XLSX.utils.sheet_to_json(sheet);
 
-      const tempTableData = {};
-      const chartLabels = [];
-      const bbData = [];
-      const gheData = [];
+        const tempTableData = {};
+        const chartLabels = [];
+        const bbData = [];
+        const gheData = [];
 
-      jsonData.forEach((row) => {
-        const { "Managing Director": md, Reportees: reportee, "Total CSI": csi, "Total BB Repos": bb, "Total GHE Repos": ghe } = row;
+        jsonData.forEach((row) => {
+          const { "Managing Director": md, Reportees: reportee, "Total CSI": csi, "Total BB Repos": bb, "Total GHE Repos": ghe } = row;
 
-        if (!tempTableData[md]) {
-          tempTableData[md] = [];
-          chartLabels.push(md);
-          bbData.push(0);
-          gheData.push(0);
-        }
-        tempTableData[md].push({ reportee, csi, bb, ghe });
+          if (!md) return;
 
-        const mdIndex = chartLabels.indexOf(md);
-        bbData[mdIndex] += bb;
-        gheData[mdIndex] += ghe;
-      });
+          if (!tempTableData[md]) {
+            tempTableData[md] = [];
+            chartLabels.push(md);
+            bbData.push(0);
+            gheData.push(0);
+          }
+          tempTableData[md].push({ reportee, csi: csi || 0, bb: bb || 0, ghe: ghe || 0 });
 
-      setTableData(tempTableData);
-      setChartData({
-        labels: chartLabels,
-        datasets: [
-          {
-            label: "BB Repos",
-            data: bbData,
-            backgroundColor: "#8884d8",
-          },
-          {
-            label: "GHE Repos",
-            data: gheData,
-            backgroundColor: "#82ca9d",
-          },
-        ],
-      });
+          const mdIndex = chartLabels.indexOf(md);
+          bbData[mdIndex] += bb || 0;
+          gheData[mdIndex] += ghe || 0;
+        });
+
+        setTableData(tempTableData);
+        setChartData({
+          labels: chartLabels,
+          datasets: [
+            {
+              label: "BB Repos",
+              data: bbData,
+              backgroundColor: "#8884d8",
+            },
+            {
+              label: "GHE Repos",
+              data: gheData,
+              backgroundColor: "#82ca9d",
+            },
+          ],
+        });
+      } catch (error) {
+        console.error("Error loading Excel file:", error);
+      }
     };
 
     fetchData();
@@ -87,9 +93,9 @@ export default function ReporteeTable() {
                 <td>-</td>
               </tr>
               {expanded[md] &&
-                tableData[md].map((reportee, index) => (
+                tableData[md]?.map((reportee, index) => (
                   <tr key={index} className="child-row">
-                    <td>{reportee.reportee}</td>
+                    <td>{reportee.reportee || "N/A"}</td>
                     <td>{reportee.csi}</td>
                     <td>{reportee.bb}</td>
                     <td>{reportee.ghe}</td>
