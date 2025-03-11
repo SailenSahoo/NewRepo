@@ -17,7 +17,8 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 const Table = () => {
   const [data, setData] = useState({});
   const [expandedRows, setExpandedRows] = useState({});
-  
+  const [reporteeChartData, setReporteeChartData] = useState({});
+
   useEffect(() => {
     fetch("/data/managers.xlsx")
       .then((res) => res.arrayBuffer())
@@ -25,9 +26,12 @@ const Table = () => {
         const workbook = XLSX.read(buffer, { type: "array" });
         const sheetName = workbook.SheetNames[0];
         const sheet = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
-        
+
+        const processedData = processData(sheet);
         setData(processedData);
-        
+
+        const reporteeChart = createReporteeChart(processedData);
+        setReporteeChartData(reporteeChart);
       })
       .catch((error) => console.error("Error loading Excel:", error));
   }, []);
@@ -49,17 +53,51 @@ const Table = () => {
           hierarchy[MD] = { csi: 0, bbRepos: 0, gheRepos: 0, children: {} };
         }
 
-        hierarchy[MD].csi += csi;
-        hierarchy[MD].bbRepos += bbRepos;
-        hierarchy[MD].gheRepos += gheRepos;
+        hierarchy[MD].csi += csi || 0;
+        hierarchy[MD].bbRepos += bbRepos || 0;
+        hierarchy[MD].gheRepos += gheRepos || 0;
 
         if (Reportees) {
-          hierarchy[MD].children[Reportees] = { csi, bbRepos, gheRepos };
+          hierarchy[MD].children[Reportees] = {
+            csi: csi || 0,
+            bbRepos: bbRepos || 0,
+            gheRepos: gheRepos || 0,
+          };
         }
       }
     );
 
     return hierarchy;
+  };
+
+  const createReporteeChart = (processedData) => {
+    const reporteeLabels = [];
+    const bbRepoCounts = [];
+    const gheRepoCounts = [];
+
+    Object.entries(processedData).forEach(([MD, MDData]) => {
+      Object.entries(MDData.children).forEach(([reportee, repoData]) => {
+        reporteeLabels.push(reportee);
+        bbRepoCounts.push(repoData.bbRepos);
+        gheRepoCounts.push(repoData.gheRepos);
+      });
+    });
+
+    return {
+      labels: reporteeLabels,
+      datasets: [
+        {
+          label: "BB Repos (Reportees)",
+          data: bbRepoCounts,
+          backgroundColor: "#8884d8",
+        },
+        {
+          label: "GHE Repos (Reportees)",
+          data: gheRepoCounts,
+          backgroundColor: "#82ca9d",
+        },
+      ],
+    };
   };
 
   const toggleRow = (director) => {
@@ -70,74 +108,52 @@ const Table = () => {
     labels: Object.keys(data),
     datasets: [
       {
-        label: "BB Repo Count",
+        label: "BB Repo Count (MDs)",
         data: Object.values(data).map((item) => item.bbRepos),
+        backgroundColor: "#8884d8",
       },
       {
-        label: "BB Repo Count",
+        label: "GHE Repo Count (MDs)",
         data: Object.values(data).map((item) => item.gheRepos),
+        backgroundColor: "#82ca9d",
       },
     ],
   };
 
   const chartOptions = {
-    .
-    .
-    .
+    responsive: true,
+    plugins: {
+      legend: {
+        position: "top",
+      },
+      title: {
+        display: true,
+        text: "Managing Directors' Repo Counts",
+      },
+    },
+  };
+
+  const reporteeChartOptions = {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: "top",
+      },
+      title: {
+        display: true,
+        text: "Reportees' Repo Counts",
+      },
+    },
   };
 
   return (
-    <>
-      <div className="chart-container">
-        <h3>Managing Director Repo Count</h3>
-        <Bar data={chartDataMD} />
-      </div>
-      <div className="chart-container">
-        <h3>Reportee Repo Count</h3>
-        <Bar data={chartDataReportees} />
-      </div>
-      <table className="manager-table">
-        <thead>
-          <tr>
-            <th>Managing Director</th>
-            <th>Total CSI</th>
-            <th>Total BB Repos</th>
-            <th>Total GHE Repos</th>
-          </tr>
-        </thead>
-        <tbody>
-          {Object.entries(data).map(([MD, MDData]) => (
-            <React.Fragment key={MD}>
-              <tr>
-                <td>
-                  <button
-                    className="expand-btn"
-                    onClick={() => toggleRow(MD)}
-                  >
-                    {expandedRows[MD] ? "−" : "+"}
-                  </button>
-                  {MD}
-                </td>
-                <td>{MDData.csi}</td>
-                <td>{MDData.bbRepos}</td>
-                <td>{MDData.gheRepos}</td>
-              </tr>
-              {expandedRows[MD] &&
-                Object.entries(MDData.children).map(
-                  ([reportee, reporteeData]) => (
-                    <tr key={reportee} className="sub-row">
-                      <td> └ {reportee}</td>
-                      <td>{reporteeData.csi}</td>
-                      <td>{reporteeData.bbRepos}</td>
-                      <td>{reporteeData.gheRepos}</td>
-                    </tr>
-                  )
-                )}
-            </React.Fragment>
-          ))}
-        </tbody>
-      </table>
-    </>
+    <div>
+      <h2>Managing Directors' Repo Chart</h2>
+      <Bar data={chartData} options={chartOptions} />
+
+      <h2>Reportees' Repo Chart</h2>
+      <Bar data={reporteeChartData} options={reporteeChartOptions} />
+    </div>
   );
 };
 
