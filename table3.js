@@ -17,9 +17,7 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 const Table = () => {
   const [data, setData] = useState({});
   const [expandedRows, setExpandedRows] = useState({});
-  const [chartDataMD, setChartDataMD] = useState({});
-  const [chartDataReportees, setChartDataReportees] = useState({});
-
+  
   useEffect(() => {
     fetch("/data/managers.xlsx")
       .then((res) => res.arrayBuffer())
@@ -27,9 +25,9 @@ const Table = () => {
         const workbook = XLSX.read(buffer, { type: "array" });
         const sheetName = workbook.SheetNames[0];
         const sheet = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
-        const processedData = processData(sheet);
+        
         setData(processedData);
-        generateChartData(processedData);
+        
       })
       .catch((error) => console.error("Error loading Excel:", error));
   }, []);
@@ -64,62 +62,28 @@ const Table = () => {
     return hierarchy;
   };
 
-  const generateChartData = (hierarchy) => {
-    const MDLabels = [];
-    const MDRepoBB = [];
-    const MDRepoGHE = [];
-
-    const ReporteeLabels = [];
-    const ReporteeRepoBB = [];
-    const ReporteeRepoGHE = [];
-
-    Object.entries(hierarchy).forEach(([MD, MDData]) => {
-      MDLabels.push(MD);
-      MDRepoBB.push(MDData.bbRepos);
-      MDRepoGHE.push(MDData.gheRepos);
-
-      Object.entries(MDData.children).forEach(([reportee, reporteeData]) => {
-        ReporteeLabels.push(reportee);
-        ReporteeRepoBB.push(reporteeData.bbRepos);
-        ReporteeRepoGHE.push(reporteeData.gheRepos);
-      });
-    });
-
-    setChartDataMD({
-      labels: MDLabels,
-      datasets: [
-        {
-          label: "BB Repos",
-          data: MDRepoBB,
-          backgroundColor: "rgba(255, 99, 132, 0.5)",
-        },
-        {
-          label: "GHE Repos",
-          data: MDRepoGHE,
-          backgroundColor: "rgba(54, 162, 235, 0.5)",
-        },
-      ],
-    });
-
-    setChartDataReportees({
-      labels: ReporteeLabels,
-      datasets: [
-        {
-          label: "BB Repos",
-          data: ReporteeRepoBB,
-          backgroundColor: "rgba(255, 99, 132, 0.5)",
-        },
-        {
-          label: "GHE Repos",
-          data: ReporteeRepoGHE,
-          backgroundColor: "rgba(54, 162, 235, 0.5)",
-        },
-      ],
-    });
-  };
-
   const toggleRow = (director) => {
     setExpandedRows((prev) => ({ ...prev, [director]: !prev[director] }));
+  };
+
+  const chartData = {
+    labels: Object.keys(data),
+    datasets: [
+      {
+        label: "BB Repo Count",
+        data: Object.values(data).map((item) => item.bbRepos),
+      },
+      {
+        label: "BB Repo Count",
+        data: Object.values(data).map((item) => item.gheRepos),
+      },
+    ],
+  };
+
+  const chartOptions = {
+    .
+    .
+    .
   };
 
   return (
