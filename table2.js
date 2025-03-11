@@ -10,7 +10,7 @@ import {
   Tooltip,
   Legend
 } from "chart.js";
-import "./styles.css";
+import "./style.css";
 
 ChartJS.register(
   CategoryScale,
@@ -26,7 +26,7 @@ const Table = () => {
   const [expandedRows, setExpandedRows] = useState({});
 
   useEffect(() => {
-    fetch("/data/managers.xlsx")
+    fetch("/data/md_file.xlsx")
       .then((res) => res.arrayBuffer())
       .then((buffer) => {
         const workbook = XLSX.read(buffer, { type: "array" });
@@ -79,6 +79,23 @@ const Table = () => {
     ],
   };
 
+  const chartData2 = {
+    labels: Object.entries(data).flatMap(([MD, MDData]) =>Object.keys(MDData.children)
+    ),
+    datasets: [
+      {
+        label: "BB Repo Count",
+        backgroundColor: "#FF6384",
+        data: Object.entries(data).flatMap(([MD, MDData]) =>Object.values(MDData.children).map((child) => child.bbRepos)),
+      },
+      {
+        label: "GHE Repo Count",
+        backgroundColor: "#36A2EB",
+        data: Object.entries(data).flatMap(([MD, MDData]) =>Object.values(MDData.children).map((child) => child.gheRepos)),
+      },
+    ],
+  };
+
   const chartOptions = {
     responsive: true,
     plugins: {
@@ -87,13 +104,27 @@ const Table = () => {
       },
       title: {
         display: true,
-        text: "BB Repo Count vs GHE Repo Count",
+        text: "BB/GHE Repo Count Per Managing Directors",
+      },
+    },
+  };
+
+  const chartOptions2 = {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: "top",
+      },
+      title: {
+        display: true,
+        text: "BB/HE Repo Count Per Reportees of MD",
       },
     },
   };
 
   return (
     <div>
+    <h3 className="heading-table">Status Overview of Managing Directors and Their Reportees</h3>
       <table className="manager-table">
         <thead>
           <tr>
@@ -130,8 +161,11 @@ const Table = () => {
           ))}
         </tbody>
       </table>
-      <div className="chart-container">
+      <div className="chart-box2">
         <Bar data={chartData} options={chartOptions} />
+      </div>
+      <div className="chart-box2">
+        <Bar data={chartData2} options={chartOptions2} />
       </div>
     </div>
   );
