@@ -8,7 +8,7 @@ ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
 export default function ReporteeTable() {
   const [tableData, setTableData] = useState({});
-  const [chartData, setChartData] = useState({});
+  const [chartData, setChartData] = useState({ labels:, datasets:}); // Initialize with empty arrays
   const [expanded, setExpanded] = useState({});
 
   useEffect(() => {
@@ -21,9 +21,9 @@ export default function ReporteeTable() {
         const jsonData = XLSX.utils.sheet_to_json(sheet);
 
         const tempTableData = {};
-        const chartLabels = [];
-        const bbData = [];
-        const gheData = [];
+        const chartLabels =;
+        const bbData =;
+        const gheData =;
 
         jsonData.forEach((row) => {
           const { "Managing Director": md, Reportees: reportee, "Total CSI": csi, "Total BB Repos": bb, "Total GHE Repos": ghe } = row;
@@ -31,7 +31,7 @@ export default function ReporteeTable() {
           if (!md) return;
 
           if (!tempTableData[md]) {
-            tempTableData[md] = [];
+            tempTableData[md] =;
             chartLabels.push(md);
             bbData.push(0);
             gheData.push(0);
@@ -65,7 +65,7 @@ export default function ReporteeTable() {
     };
 
     fetchData();
-  }, []);
+  },);
 
   const toggleExpand = (md) => {
     setExpanded((prev) => ({ ...prev, [md]: !prev[md] }));
@@ -92,8 +92,8 @@ export default function ReporteeTable() {
                 <td>-</td>
                 <td>-</td>
               </tr>
-              {expanded[md] &&
-                tableData[md]?.map((reportee, index) => (
+              {expanded[md] && Array.isArray(tableData[md]) && // Check if it's an array
+                tableData[md].map((reportee, index) => (
                   <tr key={index} className="child-row">
                     <td>{reportee.reportee || "N/A"}</td>
                     <td>{reportee.csi}</td>
