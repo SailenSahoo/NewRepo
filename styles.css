@@ -138,5 +138,60 @@
     padding-left: 40px;
     background-color: #eef2ff;
   }
+
+
+/* new lines from here */
+
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #f4f4f4;
+}
+
+.container {
+  padding: 20px;
+}
+
+.title {
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.manager-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #fff;
+}
+
+.manager-table th, .manager-table td {
+  padding: 12px;
+  border: 1px solid #ddd;
+  text-align: left;
+}
+
+.parent-row {
+  background-color: #f1f1f1;
+  cursor: pointer;
+}
+
+.child-row {
+  background-color: #fff;
+  padding-left: 20px;
+}
+
+.chart-container {
+  margin-top: 40px;
+  text-align: center;
+}
+
+.chart-title {
+  font-size: 20px;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
   
   
